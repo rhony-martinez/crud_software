@@ -1,0 +1,11 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+# Node y SvelteKit
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+# Secretos y datos locales
+.env
+*.db
