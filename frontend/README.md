@@ -1,56 +1,31 @@
-# sv
+# Frontend de la clínica
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Aplicación SPA creada con SvelteKit, Svelte 5 y JavaScript. La interfaz consume la API de FastAPI para administrar médicos y citas.
 
-## Creating a project
+## Configuración
 
-If you're seeing this, you've probably already done this step. Congrats!
+Desde `frontend/`, copia `.env.example` a `.env` y confirma que la URL de la API sea la correcta:
 
-```sh
-# create a new project
-npx sv create my-app
+```env
+VITE_API_URL=http://localhost:8000
 ```
 
-To recreate this project with the same configuration:
+Reinicia el servidor de desarrollo si cambias el archivo `.env`.
+
+## Desarrollo
 
 ```sh
-# recreate this project
-npx sv@1.1.1 create --template minimal --types jsdoc --install npm frontend
-```
-
-## Adding features
-
-Add features to your project with `sv add`:
-
-```sh
-npx sv add
-```
-
-For example, to add Tailwind CSS:
-
-```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+Abre <http://localhost:5173>. El backend debe estar disponible en el puerto 8000. La página de inicio verifica `GET /salud`; las pantallas `/medicos` y `/citas` muestran un mensaje recuperable si la API todavía no está disponible.
 
-To create a production version of your app:
+## Comprobaciones
 
 ```sh
+npm run check
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Las llamadas HTTP están centralizadas en `src/lib/api.js`. Se usan las rutas sin barra final del contrato: `/medicos`, `/medicos/{id}`, `/citas` y `/citas/{id}`. El formulario de edición envía todos los campos requeridos por `PUT`; las fechas de cita se envían como texto ISO 8601 local sin zona horaria.
