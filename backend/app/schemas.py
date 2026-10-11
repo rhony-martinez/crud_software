@@ -34,6 +34,8 @@ class CitaIn(BaseModel):
     def fecha_sin_zona_horaria(cls, value: datetime) -> datetime:
         if value.tzinfo is not None and value.utcoffset() is not None:
             raise ValueError("La fecha y hora no debe incluir zona horaria")
+        if value < datetime.now():
+            raise ValueError("No se puede agendar una cita en el pasado")
         return value
 
 

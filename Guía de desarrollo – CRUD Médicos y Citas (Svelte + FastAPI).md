@@ -238,14 +238,15 @@ La clave foránea `medico_id` de Cita apunta al `id` de Medico; de ahí salen la
 | `id` | entero | Clave primaria, autoincremental |
 | `medico_id` | entero | Obligatorio, clave foránea hacia `medicos.id` |
 | `paciente` | texto | Obligatorio, de 2 a 100 caracteres |
-| `fecha_hora` | fecha y hora | Obligatorio |
+| `fecha_hora` | fecha y hora | Obligatorio, sin zona horaria y no puede estar en el pasado |
 | `motivo` | texto | Opcional, hasta 200 caracteres |
 
-**Reglas de negocio** (las dos primeras son obligatorias; la tercera es opcional y la descartan si falta tiempo):
+**Reglas de negocio:**
 
 - Si una cita usa un `medico_id` que no existe, la API responde 404.
 - Un médico que tiene citas no se puede eliminar: la API responde 409 con un mensaje claro.
-- Opcional: un médico no puede tener dos citas en la misma `fecha_hora`; la API responde 409. Si la descartan, avisen para quitarla del contrato.
+- Un médico no puede tener dos citas en la misma `fecha_hora`; la API responde 409.
+- No se puede agendar ni actualizar una cita a una fecha y hora que ya hayan pasado; la API responde 422.
 
 **Datos de prueba** que carga `seed.py`. Los dos usan estos mismos datos en los ensayos de la demo, y el script debe poder correrse varias veces sin duplicar nada.
 
@@ -275,12 +276,12 @@ Este contrato es lo que permite que el frontend y el backend se construyan en pa
 | PUT | `/medicos/{id}` | `MedicoIn` | 200, `MedicoOut` | 404, 422, 409 si el correo ya existe |
 | DELETE | `/medicos/{id}` | no | 204 sin cuerpo | 404, 409 si tiene citas |
 | GET | `/citas` | no | 200, lista de citas | no |
-| POST | `/citas` | `CitaIn` | 201, `CitaOut` | 404 si el médico no existe, 422 |
+| POST | `/citas` | `CitaIn` | 201, `CitaOut` | 404 si el médico no existe, 409 si el médico ya tiene una cita en esa fecha y hora, 422 si la fecha y hora ya pasó |
 | GET | `/citas/{id}` | no | 200, `CitaOut` | 404 |
-| PUT | `/citas/{id}` | `CitaIn` | 200, `CitaOut` | 404, 422 |
+| PUT | `/citas/{id}` | `CitaIn` | 200, `CitaOut` | 404, 409 si el médico ya tiene otra cita en esa fecha y hora, 422 si la fecha y hora ya pasó |
 | DELETE | `/citas/{id}` | no | 204 sin cuerpo | 404 |
 
-Si descartan la regla opcional de citas duplicadas, no hay más errores 409 en `/citas`. Si la mantienen, `POST` y `PUT` de citas devuelven también 409.
+Los errores de conflicto por horario duplicado usan `{"detail": "Ya existe una cita para este médico en esa fecha y hora"}`.
 
 **Formas de los datos.** `PUT` reemplaza el recurso completo: el frontend siempre envía todos los campos.
 
@@ -326,10 +327,13 @@ La respuesta de una cita trae el médico anidado para que la tabla muestre su no
 // 409
 { "detail": "No se puede eliminar un médico con citas" }
 { "detail": "Ya existe un médico con ese correo" }
+{ "detail": "Ya existe una cita para este médico en esa fecha y hora" }
 
 // 422 (lo genera FastAPI solo): aquí detail es una LISTA
 { "detail": [ { "loc": ["body", "nombre"], "msg": "String should have at least 2 characters", "type": "string_too_short" } ] }
 ```
+
+La misma validación 422 aplica si `fecha_hora` está en el pasado; el mensaje será `No se puede agendar una cita en el pasado`.
 
 Cuidado en el frontend: `detail` es un texto en los errores 404 y 409, pero una lista en el 422. La función que lee los errores debe manejar los dos casos.
 

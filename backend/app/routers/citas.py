@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
@@ -11,6 +12,7 @@ from app.schemas import CitaIn, CitaOut
 
 router = APIRouter(prefix="/citas", tags=["citas"])
 DbSession = Annotated[Session, Depends(get_db)]
+DUPLICATE_SLOT_DETAIL = "Ya existe una cita para este médico en esa fecha y hora"
 
 
 def obtener_medico_o_error(medico_id: int, db: Session) -> Medico:
@@ -21,6 +23,26 @@ def obtener_medico_o_error(medico_id: int, db: Session) -> Medico:
             detail="Médico no encontrado",
         )
     return medico
+
+
+def validar_horario_disponible(
+    medico_id: int,
+    fecha_hora: datetime,
+    db: Session,
+    cita_id: int | None = None,
+) -> None:
+    consulta = select(Cita.id).where(
+        Cita.medico_id == medico_id,
+        Cita.fecha_hora == fecha_hora,
+    )
+    if cita_id is not None:
+        consulta = consulta.where(Cita.id != cita_id)
+
+    if db.scalar(consulta) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=DUPLICATE_SLOT_DETAIL,
+        )
 
 
 @router.get("", response_model=list[CitaOut])
@@ -36,6 +58,7 @@ def listar_citas(db: DbSession):
 @router.post("", response_model=CitaOut, status_code=status.HTTP_201_CREATED)
 def crear_cita(datos: CitaIn, db: DbSession):
     medico = obtener_medico_o_error(datos.medico_id, db)
+    validar_horario_disponible(datos.medico_id, datos.fecha_hora, db)
     cita = Cita(**datos.model_dump(exclude={"medico_id"}), medico=medico)
     db.add(cita)
     try:
@@ -47,6 +70,7 @@ def crear_cita(datos: CitaIn, db: DbSession):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Médico no encontrado",
             ) from None
+        validar_horario_disponible(datos.medico_id, datos.fecha_hora, db)
         raise
     db.refresh(cita)
     return cita
@@ -81,6 +105,12 @@ def actualizar_cita(
             detail="Cita no encontrada",
         )
     medico = obtener_medico_o_error(datos.medico_id, db)
+    validar_horario_disponible(
+        datos.medico_id,
+        datos.fecha_hora,
+        db,
+        cita_id=cita_id,
+    )
 
     cita.medico = medico
     cita.paciente = datos.paciente
@@ -95,6 +125,12 @@ def actualizar_cita(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Médico no encontrado",
             ) from None
+        validar_horario_disponible(
+            datos.medico_id,
+            datos.fecha_hora,
+            db,
+            cita_id=cita_id,
+        )
         raise
     db.refresh(cita)
     return cita

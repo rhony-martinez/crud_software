@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -19,6 +19,13 @@ class Medico(Base):
 
 class Cita(Base):
     __tablename__ = "citas"
+    __table_args__ = (
+        UniqueConstraint(
+            "medico_id",
+            "fecha_hora",
+            name="uq_citas_medico_fecha_hora",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     medico_id: Mapped[int] = mapped_column(
