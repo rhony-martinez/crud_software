@@ -9,3 +9,5 @@ frontend/build/
 # Secretos y datos locales
 .env
 *.db
+# SQL
+respaldo.sql
